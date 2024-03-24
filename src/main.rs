@@ -6,7 +6,7 @@ use sha2::{Digest, Sha256};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const SALT: &str = "ab39ncf0-3aldmAS3NK3f";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Request {
     text: String,
 }
@@ -19,6 +19,7 @@ struct Response {
 }
 
 async fn handler(req_body: web::Json<Request>) -> impl Responder {
+    log::info!("handling request: {req_body:?}");
     let mut rng = rand::thread_rng();
     let prob: f64 = rng.gen();
 
@@ -54,6 +55,8 @@ async fn handler(req_body: web::Json<Request>) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    simple_logging::log_to_file("/opt/shared/test.log", log::LevelFilter::Info)?;
+
     HttpServer::new(|| App::new().route("/", web::post().to(handler)))
         .bind("0.0.0.0:9001")?
         .run()
