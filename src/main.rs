@@ -55,7 +55,7 @@ async fn handler(req_body: web::Json<Request>) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    simple_logging::log_to_file("/opt/shared/test.log", log::LevelFilter::Info)?;
+    simple_logging::log_to_file("/opt/shared/flakysaas.log", log::LevelFilter::Info)?;
 
     HttpServer::new(|| App::new().route("/", web::post().to(handler)))
         .bind("0.0.0.0:9001")?

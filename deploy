@@ -1,0 +1,20 @@
+#!/bin/bash
+die() {
+  echo "$0: $*" >&2
+  exit 1
+}
+
+project=flakysaas
+
+# Build the new image.
+docker build -t "$project":latest .  || die "failed to build $project image"
+
+# Show the running containers that we'll kill for posterity.
+docker ps -f 'ancestor="$project"'
+
+# Kill the old image.
+docker ps -qf 'ancestor="$project"' | xargs docker rm -f 
+
+# Launch the new image into a container.
+docker run -d --restart unless-stopped -v /opt/shared:/opt/shared -p 9001:9001 "$project":latest \
+  || die "failed to build $project image"
