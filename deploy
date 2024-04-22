@@ -13,8 +13,13 @@ docker build -t "$project":latest .  || die "failed to build $project image"
 docker ps -f 'ancestor="$project"'
 
 # Kill the old image.
-docker ps -qf 'ancestor="$project"' | xargs docker rm -f 
+docker ps -qf 'ancestor="$project"' | xargs -r docker rm -f 
 
 # Launch the new image into a container.
-docker run -d --restart unless-stopped -v /opt/shared:/opt/shared -p 9001:9001 "$project":latest \
+docker run \
+  -d \
+  --restart unless-stopped \
+  -v /opt/shared:/opt/shared \
+  -p 9001:9001 \
+  "$project":latest \
   || die "failed to build $project image"
