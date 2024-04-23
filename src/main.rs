@@ -1,4 +1,5 @@
 use crate::error::*;
+use actix_governor::{Governor, GovernorConfigBuilder};
 use actix_web::rt::time::sleep;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use rand::Rng;
@@ -154,6 +155,12 @@ async fn main() {
     let log_filename = "/opt/shared/flakysaas.log";
     eprintln!("logging to {log_filename}...");
     simple_logging::log_to_file(log_filename, log::LevelFilter::Info).unwrap();
+    let governor_conf = GovernorConfigBuilder::default()
+        .per_second(5)
+        .burst_size(5)
+        .finish()
+        .unwrap();
+
     // simple_logging::log_to_stderr(log::LevelFilter::Debug);
     let client = Client::new();
     let text = client
@@ -167,8 +174,9 @@ async fn main() {
         .await
         .unwrap();
     log::info!("Test query: {text}");
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
+            .wrap(Governor::new(&governor_conf))
             .route("/quote", web::post().to(quote_handler))
             .route("/currencies", web::get().to(currencies_handler))
     })

@@ -22,4 +22,4 @@ docker run \
   -v /opt/shared:/opt/shared \
   -p 9001:9001 \
   "$project":latest \
-  || die "failed to build $project image"
+  || die "failed to run $project:latest image"
