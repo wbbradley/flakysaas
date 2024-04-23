@@ -150,8 +150,10 @@ async fn get_rate_quote(quote: &str, base: &str) -> Result<(String, f64)> {
 
 #[actix_web::main]
 async fn main() {
-    // simple_logging::log_to_file("/opt/shared/flakysaas.log", log::LevelFilter::Info).unwrap();;
-    simple_logging::log_to_stderr(log::LevelFilter::Debug);
+    let log_filename = "/opt/shared/flakysaas.log";
+    eprintln!("logging to {log_filename}...");
+    simple_logging::log_to_file(log_filename, log::LevelFilter::Info).unwrap();
+    // simple_logging::log_to_stderr(log::LevelFilter::Debug);
     let client = Client::new();
     let text = client
         .get("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/btc.json")
