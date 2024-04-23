@@ -124,7 +124,8 @@ async fn get_rate_quote(quote: &str, base: &str) -> Result<(String, f64)> {
         .await
         .map_err(|_| Error::NotFound)?
         .json::<Value>()
-        .await?;
+        .await
+        .map_err(|_| Error::NotFound)?;
     let Value::Object(map) = json else {
         return Err(internal_error("failed to get object from forex results"));
     };
@@ -142,7 +143,7 @@ async fn get_rate_quote(quote: &str, base: &str) -> Result<(String, f64)> {
         )))?;
     let rate: f64 = quotes
         .get(&quote)
-        .ok_or(internal_error(format!("could not find {quote} in quotes")))?
+        .ok_or(Error::NotFound)? // internal_error(format!("could not find {quote} in quotes")))?
         .as_f64()
         .ok_or(internal_error("could not convert rate quote to f64"))?;
     Ok((date.to_string(), rate))
