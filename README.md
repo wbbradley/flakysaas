@@ -14,5 +14,5 @@ On prod machine, run `./deploy`.
 
 ```
 curl http://localhost:9001/currencies
-curl -H 'Content-Type: application/json' -d '{"base": "USD", "quote": "BTC"}' http://localhost:9001/quote
+curl -H 'Content-Type: application/json' -d '{"quote": "USD", "base": "BTC"}' http://localhost:9001/quote
 ```

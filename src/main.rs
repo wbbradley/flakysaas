@@ -1,3 +1,4 @@
+/// This code is ugly. It's a hack to create a challenge.
 use crate::error::*;
 use actix_governor::{Governor, GovernorConfigBuilder};
 use actix_web::rt::time::sleep;
@@ -30,26 +31,14 @@ struct Params {
     ok: Option<String>,
 }
 
-async fn quote_handler(
-    req_body: web::Json<Request>,
-    query: web::Query<Params>,
-) -> Result<impl Responder> {
-    log::info!("handling request: {req_body:?}");
+async fn maybe_be_flaky() -> Result<()> {
     let mut rng = rand::thread_rng();
-    let mut prob: f64 = rng.gen();
+    let prob: f64 = rng.gen();
 
-    if query.ok.is_some() {
-        log::info!("sent ok!");
-        prob = 1.0;
-    }
-    // Simulate failure 70% of the time
     if prob < 0.15 {
         sleep(Duration::from_millis((prob * 10_000.0).round() as u64)).await;
         return Err(internal_error("fake error".to_string()));
-        // HttpResponse::InternalServerError().body("Internal Server Error");
     }
-
-    // Simulate delay 20% of the time
     if prob < 0.6 {
         log::info!("sleeping for 2s");
         sleep(Duration::from_secs(2)).await;
@@ -57,6 +46,17 @@ async fn quote_handler(
     if prob < 0.3 {
         log::info!("sleeping for 18s");
         sleep(Duration::from_secs(18)).await;
+    }
+    Ok(())
+}
+
+async fn quote_handler(
+    req_body: web::Json<Request>,
+    query: web::Query<Params>,
+) -> Result<impl Responder> {
+    log::info!("handling quote: request: {req_body:?}");
+    if query.ok.is_none() {
+        maybe_be_flaky().await?;
     }
     let (date, rate) = get_rate_quote(&req_body.quote, &req_body.base).await?;
 
@@ -70,15 +70,18 @@ async fn quote_handler(
     Ok(HttpResponse::Ok().json(resp))
 }
 
-async fn currencies_handler() -> Result<impl Responder> {
+async fn currencies_handler(query: web::Query<Params>) -> Result<impl Responder> {
     log::info!("handling currencies request");
+    if query.ok.is_none() {
+        maybe_be_flaky().await?;
+    }
     let currencies = get_currencies().await?;
     Ok(HttpResponse::Ok().json(currencies))
 }
 
 async fn get_currencies() -> Result<Vec<String>> {
     let base = "usd";
-    // Simulate delay 20% of the time
+    // Simulate delay some of the time
     let client = Client::new();
     let json: Value = client
         .get(format!(
@@ -153,27 +156,15 @@ async fn get_rate_quote(quote: &str, base: &str) -> Result<(String, f64)> {
 #[actix_web::main]
 async fn main() {
     let log_filename = "/opt/shared/flakysaas.log";
-    eprintln!("logging to {log_filename}...");
     simple_logging::log_to_file(log_filename, log::LevelFilter::Info).unwrap();
+
+    // Set up the rate limiter.
     let governor_conf = GovernorConfigBuilder::default()
         .per_second(5)
         .burst_size(5)
         .finish()
         .unwrap();
 
-    // simple_logging::log_to_stderr(log::LevelFilter::Debug);
-    let client = Client::new();
-    let text = client
-        .get("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/btc.json")
-        .header("Content-Type", "application/json")
-        .header("Accept", "application/json")
-        .send()
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap();
-    log::info!("Test query: {text}");
     HttpServer::new(move || {
         App::new()
             .wrap(Governor::new(&governor_conf))
